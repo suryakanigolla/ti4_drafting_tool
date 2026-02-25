@@ -31,6 +31,7 @@ async function readRoomsFromBlob(): Promise<Map<string, Room>> {
 async function writeRoomsToBlob(rooms: Map<string, Room>): Promise<void> {
   const serialized = JSON.stringify(Object.fromEntries(rooms), null, 2);
   await put(ROOMS_BLOB_PATH, serialized, {
+    access: "private",
     addRandomSuffix: false,
     contentType: "application/json; charset=utf-8"
   });
