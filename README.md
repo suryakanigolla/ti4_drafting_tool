@@ -15,6 +15,14 @@ Next.js app for private Twilight Imperium 4 faction drafting.
 - Other players cannot view your options or selection.
 - Room closes automatically once all picks are submitted and displays **Happy Gaming**.
 
+## Environment variables
+
+Add the Vercel Blob read/write token before running locally:
+
+```bash
+BLOB_READ_WRITE_TOKEN=your_vercel_blob_read_write_token
+```
+
 ## Run locally
 
 ```bash
