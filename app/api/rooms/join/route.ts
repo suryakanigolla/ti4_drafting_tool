@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const code = String(body.code || "").toUpperCase();
     const name = String(body.name || "").trim();
-    const { room, player } = joinRoom(code, name);
+    const { room, player } = await joinRoom(code, name);
 
     return NextResponse.json({
       roomCode: room.code,

@@ -1,15 +1,9 @@
 import { assignDraftOptions, getFactionPool } from "@/lib/draft";
 import { Faction, ModeConfig, Player, Room } from "@/types/draft";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __ti4Rooms: Map<string, Room> | undefined;
-}
+import { head, put } from "@vercel/blob";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const ROOMS_FILE = join(process.cwd(), "data", ".rooms.runtime.json");
+const ROOMS_BLOB_PATH = "rooms/rooms.json";
 
 function randomCode(len = 6): string {
   return Array.from({ length: len }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join("");
@@ -19,28 +13,32 @@ function randomId(): string {
   return crypto.randomUUID();
 }
 
-function readRoomsFromDisk(): Map<string, Room> {
+async function readRoomsFromBlob(): Promise<Map<string, Room>> {
   try {
-    const raw = readFileSync(ROOMS_FILE, "utf8");
-    const parsed = JSON.parse(raw) as Record<string, Room>;
+    const blob = await head(ROOMS_BLOB_PATH);
+    const response = await fetch(blob.url, { cache: "no-store" });
+    if (!response.ok) {
+      return new Map<string, Room>();
+    }
+
+    const parsed = (await response.json()) as Record<string, Room>;
     return new Map(Object.entries(parsed));
   } catch {
     return new Map<string, Room>();
   }
 }
 
-function writeRoomsToDisk(rooms: Map<string, Room>) {
-  mkdirSync(dirname(ROOMS_FILE), { recursive: true });
+async function writeRoomsToBlob(rooms: Map<string, Room>): Promise<void> {
   const serialized = JSON.stringify(Object.fromEntries(rooms), null, 2);
-  const tempFile = `${ROOMS_FILE}.tmp`;
-  writeFileSync(tempFile, serialized, "utf8");
-  renameSync(tempFile, ROOMS_FILE);
+  await put(ROOMS_BLOB_PATH, serialized, {
+    access: "private",
+    addRandomSuffix: false,
+    contentType: "application/json; charset=utf-8"
+  });
 }
 
-function getRooms(): Map<string, Room> {
-  const rooms = readRoomsFromDisk();
-  globalThis.__ti4Rooms = rooms;
-  return rooms;
+async function getRooms(): Promise<Map<string, Room>> {
+  return readRoomsFromBlob();
 }
 
 function ensureRoom(code: string, rooms: Map<string, Room>): Room {
@@ -51,8 +49,8 @@ function ensureRoom(code: string, rooms: Map<string, Room>): Room {
   return room;
 }
 
-export function createRoom(hostName: string, mode: ModeConfig) {
-  const rooms = getRooms();
+export async function createRoom(hostName: string, mode: ModeConfig) {
+  const rooms = await getRooms();
   const host: Player = { id: randomId(), name: hostName.trim(), joinedAt: Date.now() };
 
   let code = randomCode();
@@ -70,12 +68,12 @@ export function createRoom(hostName: string, mode: ModeConfig) {
   };
 
   rooms.set(code, room);
-  writeRoomsToDisk(rooms);
+  await writeRoomsToBlob(rooms);
   return { room, player: host };
 }
 
-export function joinRoom(code: string, playerName: string): { room: Room; player: Player } {
-  const rooms = getRooms();
+export async function joinRoom(code: string, playerName: string): Promise<{ room: Room; player: Player }> {
+  const rooms = await getRooms();
   const room = ensureRoom(code, rooms);
   if (room.status !== "lobby") {
     throw new Error("Room is not open for joining.");
@@ -89,12 +87,12 @@ export function joinRoom(code: string, playerName: string): { room: Room; player
   const player: Player = { id: randomId(), name, joinedAt: Date.now() };
   room.players.push(player);
   rooms.set(room.code, room);
-  writeRoomsToDisk(rooms);
+  await writeRoomsToBlob(rooms);
   return { room, player };
 }
 
-export function getRoomStatus(code: string, playerId: string) {
-  const rooms = getRooms();
+export async function getRoomStatus(code: string, playerId: string) {
+  const rooms = await getRooms();
   const room = ensureRoom(code, rooms);
   const isMember = room.players.some((p) => p.id === playerId);
   if (!isMember) {
@@ -122,8 +120,8 @@ export function getRoomStatus(code: string, playerId: string) {
   };
 }
 
-export function startDraft(code: string, hostId: string) {
-  const rooms = getRooms();
+export async function startDraft(code: string, hostId: string) {
+  const rooms = await getRooms();
   const room = ensureRoom(code, rooms);
   if (room.hostId !== hostId) {
     throw new Error("Only the host can start the draft.");
@@ -137,12 +135,12 @@ export function startDraft(code: string, hostId: string) {
   room.status = "drafting";
 
   rooms.set(room.code, room);
-  writeRoomsToDisk(rooms);
+  await writeRoomsToBlob(rooms);
   return room;
 }
 
-export function submitPick(code: string, playerId: string, factionId: string) {
-  const rooms = getRooms();
+export async function submitPick(code: string, playerId: string, factionId: string) {
+  const rooms = await getRooms();
   const room = ensureRoom(code, rooms);
   if (room.status !== "drafting") {
     throw new Error("Draft is not active.");
@@ -169,11 +167,11 @@ export function submitPick(code: string, playerId: string, factionId: string) {
   }
 
   rooms.set(room.code, room);
-  writeRoomsToDisk(rooms);
+  await writeRoomsToBlob(rooms);
   return room;
 }
 
-export function listRoomPicksForDebug(code: string): Record<string, Faction> {
-  const rooms = getRooms();
+export async function listRoomPicksForDebug(code: string): Promise<Record<string, Faction>> {
+  const rooms = await getRooms();
   return ensureRoom(code, rooms).picksByPlayer;
 }

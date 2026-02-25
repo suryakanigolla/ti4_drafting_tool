@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Base game must be enabled." }, { status: 400 });
     }
 
-    const { room, player } = createRoom(hostName, mode);
+    const { room, player } = await createRoom(hostName, mode);
 
     return NextResponse.json({
       roomCode: room.code,
