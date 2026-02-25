@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "code and playerId are required." }, { status: 400 });
     }
 
-    return NextResponse.json(getRoomStatus(code, playerId));
+    return NextResponse.json(await getRoomStatus(code, playerId));
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }

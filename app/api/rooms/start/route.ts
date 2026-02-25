@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const code = String(body.code || "").toUpperCase();
     const hostId = String(body.hostId || "");
-    const room = startDraft(code, hostId);
+    const room = await startDraft(code, hostId);
 
     return NextResponse.json({ status: room.status });
   } catch (error) {
