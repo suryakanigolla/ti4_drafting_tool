@@ -1,7 +1,16 @@
 import { assignDraftOptions, getFactionPool } from "@/lib/draft";
 import { Faction, ModeConfig, Player, Room } from "@/types/draft";
 
-const rooms = new Map<string, Room>();
+declare global {
+  // eslint-disable-next-line no-var
+  var __ti4Rooms: Map<string, Room> | undefined;
+}
+
+const rooms = globalThis.__ti4Rooms ?? new Map<string, Room>();
+
+if (!globalThis.__ti4Rooms) {
+  globalThis.__ti4Rooms = rooms;
+}
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
