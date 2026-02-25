@@ -36,6 +36,8 @@ async function writeRoomsToBlob(rooms: Map<string, Room>): Promise<void> {
   // Preserve the previous object schema (Record<string, Room>) in blob JSON.
   const serialized = JSON.stringify(Object.fromEntries(rooms), null, 2);
   await put(ROOMS_BLOB_PATH, serialized, {
+    // Current Blob SDK typing requires explicit access and only supports `public` here.
+    access: "public",
     // Keep a deterministic key so reads can always use `rooms/rooms.json`.
     addRandomSuffix: false,
     contentType: "application/json; charset=utf-8"
