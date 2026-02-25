@@ -3,6 +3,7 @@ import { Faction, ModeConfig, Player, Room } from "@/types/draft";
 import { head, put } from "@vercel/blob";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+// Single canonical blob object that stores all active rooms as JSON.
 const ROOMS_BLOB_PATH = "rooms/rooms.json";
 
 function randomCode(len = 6): string {
@@ -15,7 +16,9 @@ function randomId(): string {
 
 async function readRoomsFromBlob(): Promise<Map<string, Room>> {
   try {
+    // `head` gives us the current blob URL for this fixed path.
     const blob = await head(ROOMS_BLOB_PATH);
+    // Use `no-store` so each API invocation reads the latest room state.
     const response = await fetch(blob.url, { cache: "no-store" });
     if (!response.ok) {
       return new Map<string, Room>();
@@ -24,14 +27,16 @@ async function readRoomsFromBlob(): Promise<Map<string, Room>> {
     const parsed = (await response.json()) as Record<string, Room>;
     return new Map(Object.entries(parsed));
   } catch {
+    // Blob not created yet (or unavailable): treat as empty room store.
     return new Map<string, Room>();
   }
 }
 
 async function writeRoomsToBlob(rooms: Map<string, Room>): Promise<void> {
+  // Preserve the previous object schema (Record<string, Room>) in blob JSON.
   const serialized = JSON.stringify(Object.fromEntries(rooms), null, 2);
   await put(ROOMS_BLOB_PATH, serialized, {
-    access: "private",
+    // Keep a deterministic key so reads can always use `rooms/rooms.json`.
     addRandomSuffix: false,
     contentType: "application/json; charset=utf-8"
   });
