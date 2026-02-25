@@ -1,18 +1,15 @@
 import { assignDraftOptions, getFactionPool } from "@/lib/draft";
 import { Faction, ModeConfig, Player, Room } from "@/types/draft";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 declare global {
   // eslint-disable-next-line no-var
   var __ti4Rooms: Map<string, Room> | undefined;
 }
 
-const rooms = globalThis.__ti4Rooms ?? new Map<string, Room>();
-
-if (!globalThis.__ti4Rooms) {
-  globalThis.__ti4Rooms = rooms;
-}
-
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const ROOMS_FILE = join(process.cwd(), "data", ".rooms.runtime.json");
 
 function randomCode(len = 6): string {
   return Array.from({ length: len }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join("");
@@ -22,7 +19,31 @@ function randomId(): string {
   return crypto.randomUUID();
 }
 
-function ensureRoom(code: string): Room {
+function readRoomsFromDisk(): Map<string, Room> {
+  try {
+    const raw = readFileSync(ROOMS_FILE, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, Room>;
+    return new Map(Object.entries(parsed));
+  } catch {
+    return new Map<string, Room>();
+  }
+}
+
+function writeRoomsToDisk(rooms: Map<string, Room>) {
+  mkdirSync(dirname(ROOMS_FILE), { recursive: true });
+  const serialized = JSON.stringify(Object.fromEntries(rooms), null, 2);
+  const tempFile = `${ROOMS_FILE}.tmp`;
+  writeFileSync(tempFile, serialized, "utf8");
+  renameSync(tempFile, ROOMS_FILE);
+}
+
+function getRooms(): Map<string, Room> {
+  const rooms = readRoomsFromDisk();
+  globalThis.__ti4Rooms = rooms;
+  return rooms;
+}
+
+function ensureRoom(code: string, rooms: Map<string, Room>): Room {
   const room = rooms.get(code.toUpperCase());
   if (!room) {
     throw new Error("Room not found.");
@@ -31,6 +52,7 @@ function ensureRoom(code: string): Room {
 }
 
 export function createRoom(hostName: string, mode: ModeConfig) {
+  const rooms = getRooms();
   const host: Player = { id: randomId(), name: hostName.trim(), joinedAt: Date.now() };
 
   let code = randomCode();
@@ -48,11 +70,13 @@ export function createRoom(hostName: string, mode: ModeConfig) {
   };
 
   rooms.set(code, room);
+  writeRoomsToDisk(rooms);
   return { room, player: host };
 }
 
 export function joinRoom(code: string, playerName: string): { room: Room; player: Player } {
-  const room = ensureRoom(code);
+  const rooms = getRooms();
+  const room = ensureRoom(code, rooms);
   if (room.status !== "lobby") {
     throw new Error("Room is not open for joining.");
   }
@@ -64,11 +88,14 @@ export function joinRoom(code: string, playerName: string): { room: Room; player
 
   const player: Player = { id: randomId(), name, joinedAt: Date.now() };
   room.players.push(player);
+  rooms.set(room.code, room);
+  writeRoomsToDisk(rooms);
   return { room, player };
 }
 
 export function getRoomStatus(code: string, playerId: string) {
-  const room = ensureRoom(code);
+  const rooms = getRooms();
+  const room = ensureRoom(code, rooms);
   const isMember = room.players.some((p) => p.id === playerId);
   if (!isMember) {
     throw new Error("Player not in room.");
@@ -96,7 +123,8 @@ export function getRoomStatus(code: string, playerId: string) {
 }
 
 export function startDraft(code: string, hostId: string) {
-  const room = ensureRoom(code);
+  const rooms = getRooms();
+  const room = ensureRoom(code, rooms);
   if (room.hostId !== hostId) {
     throw new Error("Only the host can start the draft.");
   }
@@ -108,11 +136,14 @@ export function startDraft(code: string, hostId: string) {
   room.optionsByPlayer = assignDraftOptions(room.players, pool);
   room.status = "drafting";
 
+  rooms.set(room.code, room);
+  writeRoomsToDisk(rooms);
   return room;
 }
 
 export function submitPick(code: string, playerId: string, factionId: string) {
-  const room = ensureRoom(code);
+  const rooms = getRooms();
+  const room = ensureRoom(code, rooms);
   if (room.status !== "drafting") {
     throw new Error("Draft is not active.");
   }
@@ -137,9 +168,12 @@ export function submitPick(code: string, playerId: string, factionId: string) {
     room.status = "closed";
   }
 
+  rooms.set(room.code, room);
+  writeRoomsToDisk(rooms);
   return room;
 }
 
 export function listRoomPicksForDebug(code: string): Record<string, Faction> {
-  return ensureRoom(code).picksByPlayer;
+  const rooms = getRooms();
+  return ensureRoom(code, rooms).picksByPlayer;
 }
