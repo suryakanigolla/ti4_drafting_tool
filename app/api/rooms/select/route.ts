@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const playerId = String(body.playerId || "");
     const factionId = String(body.factionId || "");
 
-    const room = submitPick(code, playerId, factionId);
+    const room = await submitPick(code, playerId, factionId);
 
     return NextResponse.json({
       status: room.status,
