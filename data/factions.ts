@@ -1,0 +1,31 @@
+import { Faction } from "@/types/draft";
+
+export const FACTIONS: Faction[] = [
+  { id: "arborec", name: "The Arborec", source: "base" },
+  { id: "barony", name: "The Barony of Letnev", source: "base" },
+  { id: "clan", name: "The Clan of Saar", source: "base" },
+  { id: "creuss", name: "The Ghosts of Creuss", source: "base" },
+  { id: "hacan", name: "The Emirates of Hacan", source: "base" },
+  { id: "jolnar", name: "The Universities of Jol-Nar", source: "base" },
+  { id: "l1z1x", name: "The L1Z1X Mindnet", source: "base" },
+  { id: "mentak", name: "The Mentak Coalition", source: "base" },
+  { id: "muaat", name: "The Embers of Muaat", source: "base" },
+  { id: "naalu", name: "The Naalu Collective", source: "base" },
+  { id: "nekro", name: "The Nekro Virus", source: "base" },
+  { id: "sardakk", name: "The Sardakk N'orr", source: "base" },
+  { id: "sol", name: "The Federation of Sol", source: "base" },
+  { id: "winnu", name: "The Winnu", source: "base" },
+  { id: "xxcha", name: "The Xxcha Kingdom", source: "base" },
+  { id: "yin", name: "The Yin Brotherhood", source: "base" },
+  { id: "yssaril", name: "The Yssaril Tribes", source: "base" },
+  { id: "argent", name: "The Argent Flight", source: "pok" },
+  { id: "empyrean", name: "The Empyrean", source: "pok" },
+  { id: "mahact", name: "The Mahact Gene-Sorcerers", source: "pok" },
+  { id: "nomad", name: "The Nomad", source: "pok" },
+  { id: "naazrokha", name: "The Naaz-Rokha Alliance", source: "pok" },
+  { id: "titans", name: "The Titans of Ul", source: "pok" },
+  { id: "cabal", name: "The Vuil'raith Cabal", source: "pok" },
+  { id: "keleres", name: "The Council Keleres", source: "pok" },
+  { id: "augers", name: "The Augers of Ilyxum", source: "codex1" },
+  { id: "celdauri", name: "The Celdauri Trade Confederation", source: "codex2" }
+];
